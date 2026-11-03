@@ -1,0 +1,23 @@
+version: "1.0"
+specs:
+  - specId: "SPEC-001"
+    name: "config-builder-ui"
+    sourcePaths: ["src/components", "src/services", "src/models"]
+  - specId: "SPEC-002"
+    name: "performance-dashboard"
+    sourcePaths: ["src/components", "src/services", "src/models"]
+  - specId: "SPEC-003"
+    name: "k6-config-contract"
+    sourcePaths: ["k6"]
+  - specId: "SPEC-004"
+    name: "k6-summary-export"
+    sourcePaths: ["k6"]
+  - specId: "SPEC-005"
+    name: "reference-api-adapter"
+    sourcePaths: ["k6/projects/reference"]
+  - specId: "SPEC-006"
+    name: "capacity-discovery-orchestrator"
+    sourcePaths: ["nxp-performance", "k6/core/profiles"]
+  - specId: "SPEC-007"
+    name: "host-observability-collector"
+    sourcePaths: ["k6/scripts/collect-host-stats.sh"]

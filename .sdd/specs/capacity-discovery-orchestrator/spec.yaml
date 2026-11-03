@@ -1,0 +1,7 @@
+specId: "SPEC-006"
+name: "capacity-discovery-orchestrator"
+version: "1.0.0"
+status: "implemented"
+owner: "project-owner"
+workflow: "requirements-first"
+documents: ["requirements.md", "design.md", "tasks.md"]

@@ -1,0 +1,66 @@
+/**
+ * App layout styles
+ * 
+ * Three-column layout:
+ * - Left sidebar (300px): EndpointList
+ * - Main area (flexible): EndpointEditor
+ * - Right panel (400px): PreviewPanel
+ */
+
+.app {
+  display: grid;
+  grid-template-columns: 300px 1fr 400px;
+  grid-template-areas: "sidebar main preview";
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-sidebar {
+  grid-area: sidebar;
+  border-right: 1px solid #e0e0e0;
+  background-color: #f8f8f8;
+  overflow-y: auto;
+}
+
+.app-main {
+  grid-area: main;
+  background-color: #ffffff;
+  overflow-y: auto;
+}
+
+.app-preview {
+  grid-area: preview;
+  background-color: #fafafa;
+  overflow-y: auto;
+}
+
+.app-language {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1200px) {
+  .app {
+    grid-template-columns: 250px 1fr 350px;
+  }
+}
+
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "sidebar"
+      "main"
+      "preview";
+  }
+
+  .app-sidebar,
+  .app-preview {
+    max-height: 300px;
+  }
+}

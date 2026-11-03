@@ -1,0 +1,7 @@
+specId: "SPEC-003"
+name: "k6-config-contract"
+version: "1.0.0"
+status: "implemented"
+owner: "project-owner"
+workflow: "requirements-first"
+documents: ["requirements.md", "design.md", "tasks.md"]

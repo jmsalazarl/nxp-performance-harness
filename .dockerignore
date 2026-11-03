@@ -1,0 +1,12 @@
+node_modules
+dist
+reports
+.git
+.agents
+.codex
+.sdd
+.vscode
+npm-debug.log
+Dockerfile
+README.md
+results

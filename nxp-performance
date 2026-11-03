@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -u -o pipefail
+export LC_ALL=C
+
+root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+k6_image="${NXP_K6_IMAGE:-grafana/k6}"
+k6_container_name="${K6_CONTAINER_NAME:-nxp-k6-capacity}"
+initial_capture_seconds="${INITIAL_CAPTURE_SECONDS:-10}"
+
+usage() {
+  printf 'Uso: ./nxp-performance run reference capacity-discovery\n'
+}
+
+if [[ "${1:-}" != "run" || "${2:-}" != "reference" || "${3:-}" != "capacity-discovery" ]]; then
+  usage >&2
+  exit 2
+fi
+
+command -v docker >/dev/null 2>&1 || {
+  printf 'docker es requerido\n' >&2
+  exit 2
+}
+
+command -v node >/dev/null 2>&1 || {
+  printf 'node es requerido para enriquecer run-config.json\n' >&2
+  exit 2
+}
+
+run_stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+run_id="${RUN_ID:-reference-${run_stamp}-capacity-discovery}"
+results_dir="${RESULTS_DIR:-results/reference/${run_id}}"
+host_stats_file="${results_dir}/docker-host-stats.csv"
+run_config_file="${results_dir}/run-config.json"
+mkdir -p "$results_dir"
+
+if docker inspect "$k6_container_name" >/dev/null 2>&1; then
+  printf 'El contenedor %s ya existe; no se reemplazara automaticamente\n' "$k6_container_name" >&2
+  exit 2
+fi
+
+host_cpu_model="$(awk -F: '/^model name[[:space:]]*:/ { sub(/^[[:space:]]+/, "", $2); print $2; exit }' /proc/cpuinfo)"
+host_logical_cpu_count="$(nproc)"
+host_memory_total="$(awk '/^MemTotal:/ { printf "%.2f MiB", $2 / 1024; exit }' /proc/meminfo)"
+os_name="$(awk -F= '$1 == "PRETTY_NAME" { gsub(/"/, "", $2); print $2; exit }' /etc/os-release)"
+kernel_version="$(uname -srvm)"
+docker_version="$(docker version --format '{{.Server.Version}}' 2>/dev/null || docker --version)"
+docker_storage_driver="$(docker info --format '{{.Driver}}' 2>/dev/null || printf 'UNKNOWN')"
+
+collector_pid=""
+k6_exit=1
+collector_exit=0
+
+stop_collector() {
+  if [[ -n "$collector_pid" ]] && kill -0 "$collector_pid" 2>/dev/null; then
+    kill "$collector_pid" 2>/dev/null || true
+    wait "$collector_pid" 2>/dev/null || true
+  fi
+}
+
+cleanup() {
+  local status="$?"
+  trap - EXIT INT TERM
+  stop_collector
+  docker rm -f "$k6_container_name" >/dev/null 2>&1 || true
+  exit "$status"
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+DOCKER_CONTAINERS="sut-api sut-web sut-db sut-storage" \
+K6_CONTAINER_NAME="$k6_container_name" \
+bash "$root_dir/k6/scripts/collect-host-stats.sh" "$host_stats_file" 5 0 &
+collector_pid=$!
+
+sleep "$initial_capture_seconds"
+
+docker run --rm --quiet \
+  --name "$k6_container_name" \
+  --user "$(id -u):$(id -g)" \
+  --network host \
+  -v "$root_dir:/work" \
+  -w /work \
+  "$k6_image" run \
+  --env PROJECT=reference \
+  --env PROFILE=capacity-discovery \
+  --env BASE_URL="${BASE_URL:-http://localhost:8080}" \
+  --env RESULTS_DIR="$results_dir" \
+  --env RUN_ID="$run_id" \
+  k6/projects/reference/main.js
+k6_exit=$?
+
+stop_collector
+collector_pid=""
+
+HOST_CPU_MODEL="$host_cpu_model" \
+HOST_LOGICAL_CPU_COUNT="$host_logical_cpu_count" \
+HOST_MEMORY_TOTAL="$host_memory_total" \
+HOST_OS="$os_name" \
+HOST_KERNEL="$kernel_version" \
+HOST_DOCKER_VERSION="$docker_version" \
+HOST_DOCKER_STORAGE_DRIVER="$docker_storage_driver" \
+RUN_ID="$run_id" \
+PROJECT="reference" \
+PROFILE="capacity-discovery" \
+K6_CONTAINER_NAME="$k6_container_name" \
+RUN_CONFIG_FILE="$run_config_file" \
+EXECUTION_TYPE="UNCONSTRAINED LOCAL CAPACITY DISCOVERY" \
+node --input-type=module <<'NODE'
+import fs from "node:fs";
+
+const file = process.env.RUN_CONFIG_FILE;
+const config = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {
+  run_id: process.env.RUN_ID,
+  project: process.env.PROJECT,
+  profile: process.env.PROFILE,
+};
+
+config.execution_type = process.env.EXECUTION_TYPE;
+config.k6_container_name = process.env.K6_CONTAINER_NAME;
+config.host = {
+  host_cpu_model: process.env.HOST_CPU_MODEL,
+  host_logical_cpu_count: Number(process.env.HOST_LOGICAL_CPU_COUNT),
+  host_memory_total: process.env.HOST_MEMORY_TOTAL,
+  os: process.env.HOST_OS,
+  kernel: process.env.HOST_KERNEL,
+  docker_version: process.env.HOST_DOCKER_VERSION,
+  docker_storage_driver: process.env.HOST_DOCKER_STORAGE_DRIVER,
+};
+
+fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+NODE
+
+if [[ "$k6_exit" -ne 0 ]]; then
+  exit "$k6_exit"
+fi
+
+exit "$collector_exit"

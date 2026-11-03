@@ -1,0 +1,7 @@
+specId: "SPEC-002"
+name: "performance-dashboard"
+version: "1.0.0"
+status: "implemented"
+owner: "project-owner"
+workflow: "requirements-first"
+documents: ["requirements.md", "design.md", "tasks.md"]

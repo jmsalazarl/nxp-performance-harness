@@ -1,0 +1,17 @@
+node_modules/
+dist/
+reports/
+results/
+.coverage/
+.env
+.env.*
+!.env.example
+npm-debug.log*
+*.log
+.vscode/
+.agents/
+.codex/
+
+# Archivos temporales del sistema
+.DS_Store
+Thumbs.db

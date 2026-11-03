@@ -1,0 +1,6 @@
+version: "1.0"
+project: "nxp-performance-harness"
+language: "es-419"
+specsPath: ".sdd/specs"
+steeringPath: ".sdd/steering"
+status: "implementation-in-progress"

@@ -1,0 +1,170 @@
+/**
+ * EndpointList Styles
+ * 
+ * Compact operational layout for the endpoint sidebar.
+ * Follows design direction: operational tool, not marketing site.
+ */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #f8f9fa;
+  border-right: 1px solid #ddd;
+  width: 280px;
+  min-width: 280px;
+}
+
+/* ============================================================================
+   HEADER
+   ============================================================================ */
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #ddd;
+  background-color: white;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.addButton {
+  padding: 10px 16px;
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.addButton:hover {
+  background-color: #0052a3;
+}
+
+.addButton:active {
+  background-color: #003d7a;
+}
+
+/* ============================================================================
+   LIST
+   ============================================================================ */
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.emptyMessage {
+  padding: 24px 16px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ============================================================================
+   ENDPOINT ITEM
+   ============================================================================ */
+
+.endpointItem {
+  padding: 12px;
+  margin-bottom: 8px;
+  background-color: white;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.endpointItem:hover {
+  border-color: #0066cc;
+  box-shadow: 0 2px 4px rgba(0, 102, 204, 0.1);
+}
+
+.endpointItem.active {
+  border-color: #0066cc;
+  background-color: #e6f2ff;
+  box-shadow: 0 2px 8px rgba(0, 102, 204, 0.2);
+}
+
+/* ============================================================================
+   ENDPOINT INFO
+   ============================================================================ */
+
+.endpointInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.endpointName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  word-break: break-word;
+}
+
+.endpointDescription {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* ============================================================================
+   ACTION BUTTONS
+   ============================================================================ */
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actionButton {
+  flex: 1;
+  padding: 6px 12px;
+  background-color: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.actionButton:hover {
+  background-color: #e0e0e0;
+}
+
+.actionButton:active {
+  background-color: #d0d0d0;
+}
+
+.deleteButton {
+  background-color: #fff0f0;
+  color: #cc0000;
+}
+
+.deleteButton:hover {
+  background-color: #ffe0e0;
+}
+
+.deleteButton:active {
+  background-color: #ffd0d0;
+}
