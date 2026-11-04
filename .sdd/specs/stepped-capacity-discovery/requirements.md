@@ -19,14 +19,15 @@ El run anterior de `capacity-discovery` permanece válido y se clasifica como `U
 
 ### Requirement 1: Perfil de capacidad escalonada
 
-**User Story:** Como responsable de performance, quiero ejecutar cargas sostenidas de 20, 40, 60 y 80 iteraciones por segundo, para distinguir capacidad estable de capacidad alcanzada momentáneamente.
+**User Story:** Como responsable de performance, quiero ejecutar cargas sostenidas en targets configurables, para distinguir capacidad estable de capacidad alcanzada momentáneamente.
 
 #### Acceptance Criteria
 
 1. WHEN se solicita `capacity-stepped`, THE Framework SHALL ejecutar `ramping-arrival-rate` con warm-up, transiciones y holds definidos por el perfil.
 2. WHERE el perfil no recibe una configuración alternativa, THE Framework SHALL usar 10 iteraciones por segundo durante 2 minutos, transiciones de 30 segundos y holds de 20, 40, 60 y 80 iteraciones por segundo con duraciones de 3, 4, 4 y 4 minutos respectivamente.
-3. WHEN se ejecuta `capacity-discovery`, THE Framework SHALL conservar su comportamiento existente y clasificarlo como `UNCONSTRAINED LOCAL RAMP DISCOVERY`.
-4. THE Framework SHALL mantener `preAllocatedVUs=30` y `maxVUs=100` como valores predeterminados para `capacity-stepped`, salvo configuración explícita.
+3. WHEN se proporciona `CAPACITY_STEPS` con targets ascendentes, THE Framework SHALL construir transiciones y ventanas de medición para esos targets sin requerir otro profile.
+4. WHEN se ejecuta `capacity-discovery`, THE Framework SHALL conservar su comportamiento existente y clasificarlo como `UNCONSTRAINED LOCAL RAMP DISCOVERY`.
+5. THE Framework SHALL mantener `preAllocatedVUs=30` y `maxVUs=100` como valores predeterminados para `capacity-stepped`, salvo configuración explícita.
 
 ### Requirement 2: Clasificación de etapas
 

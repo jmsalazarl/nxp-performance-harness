@@ -2,18 +2,20 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const projectRoot = new URL('.', import.meta.url).pathname;
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@models': path.resolve(__dirname, './src/models'),
-      '@services': path.resolve(__dirname, './src/services'),
-      '@context': path.resolve(__dirname, './src/context'),
-      '@utils': path.resolve(__dirname, './src/utils'),
-      '@assets': path.resolve(__dirname, './src/assets'),
+      '@': path.resolve(projectRoot, './src'),
+      '@components': path.resolve(projectRoot, './src/components'),
+      '@hooks': path.resolve(projectRoot, './src/hooks'),
+      '@models': path.resolve(projectRoot, './src/models'),
+      '@services': path.resolve(projectRoot, './src/services'),
+      '@context': path.resolve(projectRoot, './src/context'),
+      '@utils': path.resolve(projectRoot, './src/utils'),
+      '@assets': path.resolve(projectRoot, './src/assets'),
     },
   },
   test: {
@@ -23,6 +25,12 @@ export default defineConfig({
     coverage: {
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx'],
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 65,
+        lines: 75,
+      },
     },
   },
 });

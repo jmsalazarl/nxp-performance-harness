@@ -42,6 +42,12 @@ Implementar `capacity-stepped`, métricas independientes por ventana, correlaci�
   - _Capa: QA / Operación_
   - _Depende de: 2, 3, 4, 5_
 
+- [x] 7. Parametrizar targets de stepped capacity
+  - Permitir `CAPACITY_STEPS` y duraciones externas sin crear profiles específicos por rango.
+  - _Requerimiento: Requirement 1_
+  - _Capa: K6 Core / Orchestrator_
+  - _Depende de: 1_
+
 ## Notes
 
 - El resultado anterior de `capacity-discovery` no se modifica ni elimina.

@@ -1,0 +1,43 @@
+stages:
+  - validate
+  - test
+  - quality
+  - security
+  - build
+
+default:
+  image: node:24-alpine
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline --ignore-scripts
+
+validate:
+  stage: validate
+  script:
+    - npm run typecheck
+
+tests:
+  stage: test
+  script:
+    - npm test
+
+quality:
+  stage: quality
+  script:
+    - npm run test:coverage
+
+security:
+  stage: security
+  script:
+    - npm run security:audit
+    - npm run security:scan
+
+build:
+  stage: build
+  script:
+    - npm run build

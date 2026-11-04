@@ -13,16 +13,20 @@
  * Requirements: 1.1, 1.2, 1.3
  */
 
+import { useState } from 'react';
 import { ConfigProvider } from './context/ConfigContext';
 import { LanguageProvider } from './i18n';
 import { EndpointList } from './components/EndpointList';
 import { EndpointEditor } from './components/EndpointEditor';
 import { PreviewPanel } from './components/PreviewPanel';
 import { LanguageSwitcher } from './components/LanguageSwitcher';
+import { AnalysisIntake } from './components/AnalysisIntake';
 import './assets/styles/global.css';
 import './App.css';
 
 function App() {
+  const [isIntakeOpen, setIsIntakeOpen] = useState(false);
+
   return (
     <LanguageProvider>
       <ConfigProvider>
@@ -32,6 +36,9 @@ function App() {
             <div className="app-language">
               <LanguageSwitcher />
             </div>
+            <button className="app-new-analysis" type="button" onClick={() => setIsIntakeOpen(true)}>
+              + Nuevo analisis
+            </button>
             <EndpointList />
           </aside>
 
@@ -45,6 +52,7 @@ function App() {
             <PreviewPanel />
           </aside>
         </div>
+        {isIntakeOpen && <AnalysisIntake onClose={() => setIsIntakeOpen(false)} />}
       </ConfigProvider>
     </LanguageProvider>
   );

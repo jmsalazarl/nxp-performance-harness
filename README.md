@@ -83,7 +83,7 @@ Componentes principales:
 
 ## Prerequisites
 
-- Node.js 18 o superior.
+- Node.js 22.12 o superior.
 - npm.
 - Docker Engine con acceso al daemon local.
 - Una API bajo prueba accesible desde el host o desde la red configurada.
@@ -198,7 +198,7 @@ El perfil `capacity-stepped` representa un:
 UNCONSTRAINED LOCAL STEPPED CAPACITY DISCOVERY
 ```
 
-Utiliza un warm-up de 10 iteraciones por segundo, transiciones de 30 segundos y ventanas de medición sostenidas de 20, 40, 60 y 80 iteraciones por segundo. Solo las ventanas `measurement` se utilizan para clasificar capacidad sostenida.
+Utiliza un warm-up de 10 iteraciones por segundo, transiciones de 30 segundos y ventanas de medición sostenidas de 20, 40, 60 y 80 iteraciones por segundo por default. Los targets pueden cambiarse sin crear otro profile mediante `CAPACITY_STEPS=120,160,240`. Solo las ventanas `measurement` se utilizan para clasificar capacidad sostenida.
 
 ```bash
 ./nxp-performance run <project> capacity-stepped
@@ -309,13 +309,16 @@ Specs principales:
 - [Adapter de referencia para APIs](.sdd/specs/reference-api-adapter/requirements.md).
 - [Orchestrator de capacity discovery](.sdd/specs/capacity-discovery-orchestrator/requirements.md).
 - [Stepped capacity discovery](.sdd/specs/stepped-capacity-discovery/requirements.md).
+- [Performance analysis intake](.sdd/specs/performance-analysis-intake/requirements.md).
+- [Resource profile sizing](.sdd/specs/resource-profile-sizing/requirements.md).
 - [Collector de observabilidad local](.sdd/specs/host-observability-collector/requirements.md).
+- [Politica de seguridad](SECURITY.md).
 
 ## Contributing
 
 - Mantener la separación entre la interfaz web, el core k6 y los adapters de referencia.
 - Mantener los cambios trazables a la spec correspondiente en `.sdd/specs/`.
-- Ejecutar `npm test` y `npm run build` antes de solicitar revisión.
+- Ejecutar `npm run verify` antes de solicitar revision.
 - No agregar secretos ni resultados sensibles al repositorio.
 - Documentar cambios de contratos, perfiles o métricas en la documentación técnica correspondiente.
 - Usar ramas de trabajo y revisión mediante Pull Request según las reglas del repositorio remoto.

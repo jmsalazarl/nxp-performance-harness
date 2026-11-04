@@ -22,6 +22,13 @@ if [[ -z "$container_roles_json" ]]; then
   container_roles_json='{}'
 fi
 adapter_env_json="${ADAPTER_ENV_JSON:-}"
+capacity_steps="${CAPACITY_STEPS:-}"
+capacity_stepped_start_rate="${CAPACITY_STEPPED_START_RATE:-}"
+capacity_stepped_warmup_duration="${CAPACITY_STEPPED_WARMUP_DURATION:-}"
+capacity_stepped_transition_duration="${CAPACITY_STEPPED_TRANSITION_DURATION:-}"
+capacity_stepped_measurement_duration="${CAPACITY_STEPPED_MEASUREMENT_DURATION:-}"
+capacity_stepped_pre_allocated_vus="${CAPACITY_STEPPED_PRE_ALLOCATED_VUS:-}"
+capacity_stepped_max_vus="${CAPACITY_STEPPED_MAX_VUS:-}"
 
 usage() {
   printf 'Uso: ./nxp-performance run <project> <profile>\n'
@@ -118,6 +125,13 @@ docker run --rm --quiet \
   --env ADAPTER_ENV_JSON="$adapter_env_json" \
   --env RUN_STARTED_AT="$run_started_at" \
   --env RUN_START_EPOCH_MS="$run_start_epoch_ms" \
+  --env CAPACITY_STEPS="$capacity_steps" \
+  --env CAPACITY_STEPPED_START_RATE="$capacity_stepped_start_rate" \
+  --env CAPACITY_STEPPED_WARMUP_DURATION="$capacity_stepped_warmup_duration" \
+  --env CAPACITY_STEPPED_TRANSITION_DURATION="$capacity_stepped_transition_duration" \
+  --env CAPACITY_STEPPED_MEASUREMENT_DURATION="$capacity_stepped_measurement_duration" \
+  --env CAPACITY_STEPPED_PRE_ALLOCATED_VUS="$capacity_stepped_pre_allocated_vus" \
+  --env CAPACITY_STEPPED_MAX_VUS="$capacity_stepped_max_vus" \
   --env RESULTS_DIR="$results_dir" \
   --env RUN_ID="$run_id" \
   "$adapter_container_path"

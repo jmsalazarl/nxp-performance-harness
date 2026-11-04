@@ -90,6 +90,11 @@ Variables relevantes:
 - `DOCKER_CONTAINERS`: lista de contenedores a observar.
 - `CONTAINER_ROLES_JSON`: mapa opcional rol a contenedor.
 - `CAPACITY_STEPPED_STAGE_PLAN_JSON`: plan alternativo serializado.
+- `CAPACITY_STEPS`: lista ascendente de targets separados por comas, por ejemplo `120,160,240`.
+- `CAPACITY_STEPPED_START_RATE`: tasa de warm-up y punto inicial de las transiciones.
+- `CAPACITY_STEPPED_WARMUP_DURATION`: duración del warm-up.
+- `CAPACITY_STEPPED_TRANSITION_DURATION`: duración de cada transición.
+- `CAPACITY_STEPPED_MEASUREMENT_DURATION`: duración de cada measurement window.
 - `CAPACITY_STEPPED_PRE_ALLOCATED_VUS`: VUs preasignadas.
 - `CAPACITY_STEPPED_MAX_VUS`: límite máximo de VUs.
 
@@ -113,7 +118,7 @@ Variables relevantes:
 ## Decisiones Técnicas
 
 - Se usan métricas custom por stage porque el resumen agregado de k6 no permite recuperar percentiles independientes de forma confiable solo desde `summary.json`.
-- Se mantienen `preAllocatedVUs=30` y `maxVUs=100`: el run anterior alcanzó 40 iteraciones por segundo sin dropped iterations y con latencia baja; conservar margen evita que el generador sea el límite al probar 80.
+- Se mantienen `preAllocatedVUs=30` y `maxVUs=100` como default: el run anterior alcanzó 80 iteraciones por segundo sin dropped iterations y con latencia baja; para rangos superiores se pueden elevar externamente sin cambiar el profile.
 - Los recursos se normalizan después de k6 porque el collector usa timestamps del host y necesita el `run_started_at` definitivo.
 
 ## Riesgos e Incertidumbres

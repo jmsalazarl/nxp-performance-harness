@@ -43,6 +43,26 @@ function parseDuration(value) {
   return Number(match[1]) * units[match[2]];
 }
 
+function steppedRangeDefinitions() {
+  const configured = envString("CAPACITY_STEPS", "");
+  const targets = (configured ? configured.split(",") : [20, 40, 60, 80]).map((value) => Number(value.trim()));
+  if (targets.length === 0 || targets.some((target) => !Number.isFinite(target) || target <= 0)) throw new Error("CAPACITY_STEPS debe contener tasas positivas separadas por comas");
+  if (targets.some((target, index) => index > 0 && target <= targets[index - 1])) throw new Error("CAPACITY_STEPS debe estar ordenado de forma ascendente");
+
+  const warmupTarget = envNumber("CAPACITY_STEPPED_START_RATE", 10);
+  const warmupDuration = envString("CAPACITY_STEPPED_WARMUP_DURATION", "2m");
+  const transitionDuration = envString("CAPACITY_STEPPED_TRANSITION_DURATION", "30s");
+  const measurementDuration = envString("CAPACITY_STEPPED_MEASUREMENT_DURATION", "4m");
+  const definitions = [{ id: "warmup", type: "warmup", target: warmupTarget, duration: warmupDuration }];
+  let previousTarget = warmupTarget;
+  targets.forEach((target) => {
+    definitions.push({ id: `transition_${target}`, type: "transition", target, duration: transitionDuration, from_target: previousTarget });
+    definitions.push({ id: `hold_${target}`, type: "measurement", target, duration: measurementDuration });
+    previousTarget = target;
+  });
+  return definitions;
+}
+
 export function getProfile(name) {
   const profile = name.toLowerCase();
   const base = { name: profile, ...common, thresholds: { ...provisionalSlo, ...envJson("THRESHOLDS_JSON", {}) } };
@@ -87,7 +107,8 @@ export function getProfile(name) {
   }
 
   if (profile === "capacity-stepped") {
-    const stageDefinitionsValue = stageDefinitions("CAPACITY_STEPPED", [
+    const configuredSteps = envString("CAPACITY_STEPS", "");
+    const stageDefinitionsValue = configuredSteps ? stageDefinitions("CAPACITY_STEPPED", steppedRangeDefinitions()) : stageDefinitions("CAPACITY_STEPPED", [
       { id: "warmup", type: "warmup", target: 10, duration: "2m" },
       { id: "transition_20", type: "transition", target: 20, duration: "30s" },
       { id: "hold_20", type: "measurement", target: 20, duration: "3m" },

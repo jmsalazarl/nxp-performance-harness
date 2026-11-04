@@ -42,6 +42,19 @@
   background: #ffffff;
 }
 
+.app-new-analysis {
+  display: block;
+  width: calc(100% - 1.5rem);
+  margin: 0.75rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #9b795e;
+  border-radius: 6px;
+  background: #9b795e;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 /* Responsive adjustments for smaller screens */
 @media (max-width: 1200px) {
   .app {

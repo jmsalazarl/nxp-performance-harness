@@ -6,8 +6,12 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "security:audit": "npm audit --audit-level=high",
+    "security:scan": "node scripts/security-check.mjs",
+    "verify": "npm run typecheck && npm test && npm run test:coverage && npm run security:audit && npm run security:scan && npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -21,11 +25,12 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/uuid": "^10.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/coverage-v8": "^5.1.0",
     "fast-check": "^4.1.1",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7",
-    "vitest": "^3.2.1"
+    "vite": "^8.3.5",
+    "vitest": "^5.1.0"
   }
 }

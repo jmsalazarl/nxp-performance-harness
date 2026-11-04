@@ -3,6 +3,7 @@ dist/
 reports/
 results/
 .coverage/
+coverage/
 .env
 .env.*
 !.env.example
