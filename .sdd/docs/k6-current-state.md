@@ -40,6 +40,10 @@ The runner uses K6 built-in HTTP metrics and custom metrics:
 - `transactions_per_second`
 - `active_vus`
 
-## Reporting Gap
+## Capacity Discovery
 
-The current runner does not export a standard summary JSON. The `k6-summary-export` spec defines the minimal `handleSummary(data)` addition needed for dashboard uploads.
+El run anterior de `capacity-discovery` se clasifica como `UNCONSTRAINED LOCAL RAMP DISCOVERY`. Su perfil utilizó `ramping-arrival-rate` con `startRate=3` y rampas lineales hacia 3, 5, 10, 20 y 40 iteraciones por segundo. Alcanzar 40 iteraciones por segundo confirma que el target fue alcanzado, pero no demuestra una meseta sostenida de cuatro minutos a esa tasa.
+
+El perfil `capacity-stepped` separa warm-up, transiciones y ventanas `measurement` sostenidas de 20, 40, 60 y 80 iteraciones por segundo. Solo las ventanas `measurement` se utilizan para determinar capacidad sostenida.
+
+El archivo `stage-summary.json` contiene métricas por ventana y la correlación posterior con `docker-host-stats.csv`. Los adapters externos deben permanecer fuera del repositorio público y consumir las utilidades core de stages para obtener métricas completas.

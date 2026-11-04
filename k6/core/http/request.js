@@ -1,5 +1,6 @@
 import http from "k6/http";
 import { check } from "k6";
+import { recordStageCheck, recordStageRequest, stageTags } from "../stages/context.js";
 
 function bodyFor(method, payload) {
   if (["GET", "DELETE"].includes(method) || payload === undefined) return undefined;
@@ -18,9 +19,12 @@ function urlForGet(url, payload) {
 export function request(baseUrl, method, path, payload, tags, expectedStatus = 200, headers = {}) {
   const normalizedMethod = method.toUpperCase();
   const url = `${baseUrl.replace(/\/$/, "")}${path}`;
-  const params = { headers: { "Content-Type": "application/json", ...headers }, tags };
+  const enrichedTags = stageTags(tags);
+  const params = { headers: { "Content-Type": "application/json", ...headers }, tags: enrichedTags };
   const requestUrl = normalizedMethod === "GET" ? urlForGet(url, payload) : url;
   const response = http.request(normalizedMethod, requestUrl, bodyFor(normalizedMethod, payload), params);
-  const ok = check(response, { [`${tags.operation} status ${expectedStatus}`]: (value) => value.status === expectedStatus }, tags);
+  const ok = check(response, { [`${tags.operation} status ${expectedStatus}`]: (value) => value.status === expectedStatus }, enrichedTags);
+  recordStageCheck(ok);
+  recordStageRequest(response.timings.duration, !ok);
   return { response, ok };
 }

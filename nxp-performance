@@ -6,12 +6,28 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 k6_image="${NXP_K6_IMAGE:-grafana/k6}"
 k6_container_name="${K6_CONTAINER_NAME:-nxp-k6-capacity}"
 initial_capture_seconds="${INITIAL_CAPTURE_SECONDS:-10}"
+project_id="${PROJECT_ID:-${2:-}}"
+profile="${3:-}"
+adapter_path="${ADAPTER_PATH:-$root_dir/k6/projects/reference/main.js}"
+adapter_mount_dir="$(dirname "$adapter_path")"
+adapter_file="$(basename "$adapter_path")"
+if [[ "$adapter_path" == "$root_dir"/* ]]; then
+  adapter_container_path="/work/${adapter_path#"$root_dir"/}"
+else
+  adapter_container_path="/external-adapter/$adapter_file"
+fi
+observed_containers="${DOCKER_CONTAINERS:-sut-api sut-web sut-db sut-storage}"
+container_roles_json="${CONTAINER_ROLES_JSON:-}"
+if [[ -z "$container_roles_json" ]]; then
+  container_roles_json='{}'
+fi
+adapter_env_json="${ADAPTER_ENV_JSON:-}"
 
 usage() {
-  printf 'Uso: ./nxp-performance run reference capacity-discovery\n'
+  printf 'Uso: ./nxp-performance run <project> <profile>\n'
 }
 
-if [[ "${1:-}" != "run" || "${2:-}" != "reference" || "${3:-}" != "capacity-discovery" ]]; then
+if [[ "${1:-}" != "run" || -z "$project_id" || ! "$profile" =~ ^(smoke|baseline|capacity-discovery|capacity-stepped)$ ]]; then
   usage >&2
   exit 2
 fi
@@ -26,9 +42,14 @@ command -v node >/dev/null 2>&1 || {
   exit 2
 }
 
+if [[ ! -f "$adapter_path" ]]; then
+  printf 'El adapter no existe: %s\n' "$adapter_path" >&2
+  exit 2
+fi
+
 run_stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-run_id="${RUN_ID:-reference-${run_stamp}-capacity-discovery}"
-results_dir="${RESULTS_DIR:-results/reference/${run_id}}"
+run_id="${RUN_ID:-${project_id}-${run_stamp}-${profile}}"
+results_dir="${RESULTS_DIR:-results/${project_id}/${run_id}}"
 host_stats_file="${results_dir}/docker-host-stats.csv"
 run_config_file="${results_dir}/run-config.json"
 mkdir -p "$results_dir"
@@ -49,6 +70,14 @@ docker_storage_driver="$(docker info --format '{{.Driver}}' 2>/dev/null || print
 collector_pid=""
 k6_exit=1
 collector_exit=0
+run_start_epoch_ms="$(date +%s%3N)"
+run_started_at="$(date -u +%Y-%m-%dT%H:%M:%S.%3NZ)"
+
+execution_type="UNCONSTRAINED LOCAL EXECUTION"
+case "$profile" in
+  capacity-discovery) execution_type="UNCONSTRAINED LOCAL RAMP DISCOVERY" ;;
+  capacity-stepped) execution_type="UNCONSTRAINED LOCAL STEPPED CAPACITY DISCOVERY" ;;
+esac
 
 stop_collector() {
   if [[ -n "$collector_pid" ]] && kill -0 "$collector_pid" 2>/dev/null; then
@@ -68,7 +97,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-DOCKER_CONTAINERS="sut-api sut-web sut-db sut-storage" \
+DOCKER_CONTAINERS="$observed_containers" \
 K6_CONTAINER_NAME="$k6_container_name" \
 bash "$root_dir/k6/scripts/collect-host-stats.sh" "$host_stats_file" 5 0 &
 collector_pid=$!
@@ -80,14 +109,18 @@ docker run --rm --quiet \
   --user "$(id -u):$(id -g)" \
   --network host \
   -v "$root_dir:/work" \
+  -v "$adapter_mount_dir:/external-adapter:ro" \
   -w /work \
   "$k6_image" run \
-  --env PROJECT=reference \
-  --env PROFILE=capacity-discovery \
+  --env PROJECT="$project_id" \
+  --env PROFILE="$profile" \
   --env BASE_URL="${BASE_URL:-http://localhost:8080}" \
+  --env ADAPTER_ENV_JSON="$adapter_env_json" \
+  --env RUN_STARTED_AT="$run_started_at" \
+  --env RUN_START_EPOCH_MS="$run_start_epoch_ms" \
   --env RESULTS_DIR="$results_dir" \
   --env RUN_ID="$run_id" \
-  k6/projects/reference/main.js
+  "$adapter_container_path"
 k6_exit=$?
 
 stop_collector
@@ -101,11 +134,18 @@ HOST_KERNEL="$kernel_version" \
 HOST_DOCKER_VERSION="$docker_version" \
 HOST_DOCKER_STORAGE_DRIVER="$docker_storage_driver" \
 RUN_ID="$run_id" \
-PROJECT="reference" \
-PROFILE="capacity-discovery" \
+PROJECT="$project_id" \
+PROFILE="$profile" \
 K6_CONTAINER_NAME="$k6_container_name" \
-RUN_CONFIG_FILE="$run_config_file" \
-EXECUTION_TYPE="UNCONSTRAINED LOCAL CAPACITY DISCOVERY" \
+  RUN_CONFIG_FILE="$run_config_file" \
+EXECUTION_TYPE="$execution_type" \
+ADAPTER_PATH="$adapter_path" \
+ADAPTER_TYPE="$([[ "$adapter_path" == "$root_dir"/* ]] && printf 'reference' || printf 'external')" \
+BASE_URL="${BASE_URL:-http://localhost:8080}" \
+RUN_STARTED_AT="$run_started_at" \
+RUN_START_EPOCH_MS="$run_start_epoch_ms" \
+OBSERVED_CONTAINERS="$observed_containers" \
+CONTAINER_ROLES_JSON="$container_roles_json" \
 node --input-type=module <<'NODE'
 import fs from "node:fs";
 
@@ -116,8 +156,18 @@ const config = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) :
   profile: process.env.PROFILE,
 };
 
+config.framework = { name: "nxp-performance-harness", execution_type: process.env.EXECUTION_TYPE };
+config.project = { project_id: process.env.PROJECT, adapter_type: process.env.ADAPTER_TYPE };
+config.environment = { base_url: process.env.BASE_URL };
+config.profile = { name: process.env.PROFILE };
 config.execution_type = process.env.EXECUTION_TYPE;
+config.adapter_path = process.env.ADAPTER_PATH;
+config.project_id = process.env.PROJECT;
 config.k6_container_name = process.env.K6_CONTAINER_NAME;
+config.run_started_at = process.env.RUN_STARTED_AT;
+config.run_start_epoch_ms = Number(process.env.RUN_START_EPOCH_MS);
+config.observed_containers = process.env.OBSERVED_CONTAINERS.split(/\s+/).filter(Boolean);
+config.container_roles = JSON.parse(process.env.CONTAINER_ROLES_JSON || "{}");
 config.host = {
   host_cpu_model: process.env.HOST_CPU_MODEL,
   host_logical_cpu_count: Number(process.env.HOST_LOGICAL_CPU_COUNT),
@@ -130,6 +180,8 @@ config.host = {
 
 fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
 NODE
+
+node "$root_dir/k6/scripts/normalize-stage-summary.mjs" "$results_dir"
 
 if [[ "$k6_exit" -ne 0 ]]; then
   exit "$k6_exit"

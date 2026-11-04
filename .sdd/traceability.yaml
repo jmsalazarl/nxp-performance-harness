@@ -21,3 +21,6 @@ specs:
   - specId: "SPEC-007"
     name: "host-observability-collector"
     sourcePaths: ["k6/scripts/collect-host-stats.sh"]
+  - specId: "SPEC-008"
+    name: "stepped-capacity-discovery"
+    sourcePaths: ["nxp-performance", "k6/core", "k6/scripts"]

@@ -11,9 +11,12 @@ import { writeJourney } from "./journeys/write.js";
 import { transactionJourney } from "./journeys/transaction.js";
 import { transactionStatusJourney } from "./journeys/transaction-status.js";
 import { healthJourney } from "./journeys/health.js";
+import { configureStages } from "../../core/stages/context.js";
+import { createStageSummary } from "../../core/stages/summary.js";
 
 const profileName = envString("PROFILE", "smoke");
 const profile = getProfile(profileName);
+configureStages(profile);
 const baseUrl = envString("BASE_URL", REFERENCE_DEFAULTS.baseUrl);
 const enabledJourneys = envJson("ENABLED_JOURNEYS", REFERENCE_DEFAULTS.enabledJourneys);
 const weights = { ...REFERENCE_DEFAULTS.weights, ...envJson("JOURNEY_WEIGHTS", {}) };
@@ -31,7 +34,7 @@ const activeJourneys = enabledJourneys.filter((name) => {
 if (activeJourneys.length === 0) throw new Error("No hay journeys habilitados para la ejecucion");
 
 function scenario() {
-  const common = { exec: "runJourney", tags: { project: "reference", profile: profileName } };
+  const common = { exec: "runJourney", gracefulStop: envString("GRACEFUL_STOP", "30s"), tags: { project: "reference", profile: profileName } };
   if (profile.executor === "ramping-vus") return { ...common, executor: "ramping-vus", stages: profile.stages };
   if (profile.executor === "constant-arrival-rate") return { ...common, executor: profile.executor, rate: profile.rate, timeUnit: profile.timeUnit, duration: profile.duration, preAllocatedVUs: profile.preAllocatedVUs, maxVUs: profile.maxVUs };
   return { ...common, executor: profile.executor, startRate: profile.startRate, timeUnit: profile.timeUnit, stages: profile.stages, preAllocatedVUs: profile.preAllocatedVUs, maxVUs: profile.maxVUs };
@@ -90,7 +93,8 @@ export function handleSummary(data) {
   const summary = compactSummary(data);
   const resultDir = envString("RESULTS_DIR", `results/reference/${run}`);
   const safeBaseUrl = baseUrl.replace(/(https?:\/\/)[^/]*@/, "$1");
-  const runConfig = { run_id: run, project: "reference", profile: profileName, base_url: safeBaseUrl, enabled_journeys: activeJourneys, thresholds: profile.thresholds, rates: { rate: profile.rate, start_rate: profile.startRate, time_unit: profile.timeUnit }, duration: profile.duration, git_commit: envString("GIT_COMMIT", "unknown") };
+  const runConfig = { run_id: run, project: "reference", profile: profileName, execution_type: profile.executionType, base_url: safeBaseUrl, enabled_journeys: activeJourneys, stage_definitions: profile.stageDefinitions || [], thresholds: profile.thresholds, rates: { rate: profile.rate, start_rate: profile.startRate, time_unit: profile.timeUnit }, duration: profile.duration, git_commit: envString("GIT_COMMIT", "unknown") };
+  const stageSummary = createStageSummary(data, profile, { runId: run, projectId: "reference", runStartedAt: envString("RUN_STARTED_AT", "") });
   const table = [
     "+------------------+----------+",
     "| Metric           | Value    |",
@@ -114,6 +118,7 @@ export function handleSummary(data) {
   return {
     [`${resultDir}/summary.json`]: JSON.stringify({ ...data, harness: summary }, null, 2),
     [`${resultDir}/summary.html`]: `<!doctype html><html><body><pre>${JSON.stringify(summary, null, 2)}</pre></body></html>`,
+    [`${resultDir}/stage-summary.json`]: JSON.stringify(stageSummary, null, 2),
     [`${resultDir}/run-config.json`]: JSON.stringify(runConfig, null, 2),
     stdout: `${JSON.stringify(summary, null, 2)}\n${table}\n${journeyTable}\n`,
   };

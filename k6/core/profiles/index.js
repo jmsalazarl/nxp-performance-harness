@@ -16,6 +16,33 @@ function stages(name, fallback) {
   return configured ? JSON.parse(configured) : fallback;
 }
 
+function stageDefinitions(name, fallback) {
+  const configured = envString(`${name}_STAGE_PLAN_JSON`, "");
+  const definitions = configured ? JSON.parse(configured) : fallback;
+  let elapsed = 0;
+  return definitions.map((stage) => {
+    const durationSeconds = parseDuration(stage.duration);
+    const definition = {
+      id: stage.id,
+      type: stage.type,
+      target: Number(stage.target),
+      duration: stage.duration,
+      duration_seconds: durationSeconds,
+      start_seconds: elapsed,
+      end_seconds: elapsed + durationSeconds,
+    };
+    elapsed += durationSeconds;
+    return definition;
+  });
+}
+
+function parseDuration(value) {
+  const match = String(value).match(/^(\d+(?:\.\d+)?)(ms|s|m|h)$/);
+  if (!match) throw new Error(`Duracion de stage no soportada: ${value}`);
+  const units = { ms: 0.001, s: 1, m: 60, h: 3600 };
+  return Number(match[1]) * units[match[2]];
+}
+
 export function getProfile(name) {
   const profile = name.toLowerCase();
   const base = { name: profile, ...common, thresholds: { ...provisionalSlo, ...envJson("THRESHOLDS_JSON", {}) } };
@@ -39,20 +66,49 @@ export function getProfile(name) {
   }
 
   if (profile === "capacity-discovery") {
+    const stageDefinitionsValue = stageDefinitions("CAPACITY_DISCOVERY", [
+      { id: "ramp_3", type: "transition", target: 3, duration: "2m" },
+      { id: "ramp_5", type: "transition", target: 5, duration: "3m" },
+      { id: "ramp_10", type: "transition", target: 10, duration: "3m" },
+      { id: "ramp_20", type: "transition", target: 20, duration: "4m" },
+      { id: "ramp_40", type: "transition", target: 40, duration: "4m" },
+    ]);
     return {
       ...base,
+      executionType: "UNCONSTRAINED LOCAL RAMP DISCOVERY",
       executor: "ramping-arrival-rate",
       startRate: envNumber("CAPACITY_DISCOVERY_START_RATE", 3),
       timeUnit: envString("CAPACITY_DISCOVERY_TIME_UNIT", "1s"),
-      stages: stages("CAPACITY_DISCOVERY", [
-        { target: 3, duration: "2m" },
-        { target: 5, duration: "3m" },
-        { target: 10, duration: "3m" },
-        { target: 20, duration: "4m" },
-        { target: 40, duration: "4m" },
-      ]),
+      stages: stageDefinitionsValue.map(({ target, duration }) => ({ target, duration })),
+      stageDefinitions: stageDefinitionsValue,
       preAllocatedVUs: envNumber("CAPACITY_DISCOVERY_PRE_ALLOCATED_VUS", 30),
       maxVUs: envNumber("CAPACITY_DISCOVERY_MAX_VUS", 100),
+    };
+  }
+
+  if (profile === "capacity-stepped") {
+    const stageDefinitionsValue = stageDefinitions("CAPACITY_STEPPED", [
+      { id: "warmup", type: "warmup", target: 10, duration: "2m" },
+      { id: "transition_20", type: "transition", target: 20, duration: "30s" },
+      { id: "hold_20", type: "measurement", target: 20, duration: "3m" },
+      { id: "transition_40", type: "transition", target: 40, duration: "30s" },
+      { id: "hold_40", type: "measurement", target: 40, duration: "4m" },
+      { id: "transition_60", type: "transition", target: 60, duration: "30s" },
+      { id: "hold_60", type: "measurement", target: 60, duration: "4m" },
+      { id: "transition_80", type: "transition", target: 80, duration: "30s" },
+      { id: "hold_80", type: "measurement", target: 80, duration: "4m" },
+    ]);
+    return {
+      ...base,
+      name: profile,
+      executionType: "UNCONSTRAINED LOCAL STEPPED CAPACITY DISCOVERY",
+      executor: "ramping-arrival-rate",
+      startRate: envNumber("CAPACITY_STEPPED_START_RATE", 10),
+      timeUnit: envString("CAPACITY_STEPPED_TIME_UNIT", "1s"),
+      stages: stageDefinitionsValue.map(({ target, duration }) => ({ target, duration })),
+      stageDefinitions: stageDefinitionsValue,
+      preAllocatedVUs: envNumber("CAPACITY_STEPPED_PRE_ALLOCATED_VUS", 30),
+      maxVUs: envNumber("CAPACITY_STEPPED_MAX_VUS", 100),
     };
   }
 

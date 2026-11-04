@@ -159,15 +159,15 @@ bash k6/scripts/run-reference.sh
 El perfil `capacity-discovery` representa un:
 
 ```text
-UNCONSTRAINED LOCAL CAPACITY DISCOVERY
+UNCONSTRAINED LOCAL RAMP DISCOVERY
 ```
 
-No aplica límites de CPU o RAM y no representa sizing productivo.
+No aplica límites de CPU o RAM y no representa sizing productivo. Sus stages son rampas lineales; alcanzar 40 iteraciones por segundo no demuestra una meseta sostenida a esa tasa.
 
 El comando coordinado es:
 
 ```bash
-./nxp-performance run reference capacity-discovery
+./nxp-performance run <project> capacity-discovery
 ```
 
 El perfil utiliza:
@@ -179,20 +179,32 @@ preAllocatedVUs: 30
 maxVUs: 100
 ```
 
-Stages:
+Rampa configurada:
 
 ```text
-3 iter/s   2m
-5 iter/s   3m
-10 iter/s  3m
-20 iter/s  4m
-40 iter/s  4m
+3 -> 5 -> 10 -> 20 -> 40 iter/s
 ```
 
 El orchestrator genera un nombre fijo para k6:
 
 ```text
 nxp-k6-capacity
+
+### Stepped capacity local
+
+El perfil `capacity-stepped` representa un:
+
+```text
+UNCONSTRAINED LOCAL STEPPED CAPACITY DISCOVERY
+```
+
+Utiliza un warm-up de 10 iteraciones por segundo, transiciones de 30 segundos y ventanas de medición sostenidas de 20, 40, 60 y 80 iteraciones por segundo. Solo las ventanas `measurement` se utilizan para clasificar capacidad sostenida.
+
+```bash
+./nxp-performance run <project> capacity-stepped
+```
+
+Además de los resultados estándar, genera `stage-summary.json` con métricas por etapa y correlación de recursos mediante timestamps.
 ```
 
 ## Results
@@ -206,6 +218,7 @@ results/
         ├── summary.json
         ├── summary.html
         ├── run-config.json
+        ├── stage-summary.json
         └── docker-host-stats.csv
 ```
 
@@ -295,6 +308,7 @@ Specs principales:
 - [k6 Summary Export](.sdd/specs/k6-summary-export/requirements.md).
 - [Adapter de referencia para APIs](.sdd/specs/reference-api-adapter/requirements.md).
 - [Orchestrator de capacity discovery](.sdd/specs/capacity-discovery-orchestrator/requirements.md).
+- [Stepped capacity discovery](.sdd/specs/stepped-capacity-discovery/requirements.md).
 - [Collector de observabilidad local](.sdd/specs/host-observability-collector/requirements.md).
 
 ## Contributing
