@@ -6,9 +6,10 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 k6_image="${NXP_K6_IMAGE:-grafana/k6}"
 k6_container_name="${K6_CONTAINER_NAME:-nxp-k6-capacity}"
 initial_capture_seconds="${INITIAL_CAPTURE_SECONDS:-10}"
+host_stats_interval_seconds="${HOST_STATS_INTERVAL_SECONDS:-5}"
 project_id="${PROJECT_ID:-${2:-}}"
 profile="${3:-}"
-adapter_path="${ADAPTER_PATH:-$root_dir/k6/projects/reference/main.js}"
+adapter_path="${ADAPTER_PATH:-}"
 adapter_mount_dir="$(dirname "$adapter_path")"
 adapter_file="$(basename "$adapter_path")"
 if [[ "$adapter_path" == "$root_dir"/* ]]; then
@@ -34,7 +35,7 @@ usage() {
   printf 'Uso: ./nxp-performance run <project> <profile>\n'
 }
 
-if [[ "${1:-}" != "run" || -z "$project_id" || ! "$profile" =~ ^(smoke|baseline|capacity-discovery|capacity-stepped)$ ]]; then
+if [[ "${1:-}" != "run" || -z "$project_id" || ! "$profile" =~ ^(smoke|baseline|capacity-discovery|capacity-stepped|resource-constrained)$ ]]; then
   usage >&2
   exit 2
 fi
@@ -49,6 +50,14 @@ command -v node >/dev/null 2>&1 || {
   exit 2
 }
 
+if [[ "$profile" == "resource-constrained" ]]; then
+  exec bash "$root_dir/scripts/run-resource-constrained.sh" "$project_id"
+fi
+
+if [[ -z "$adapter_path" ]]; then
+  adapter_path="$root_dir/k6/projects/reference/main.js"
+fi
+
 if [[ ! -f "$adapter_path" ]]; then
   printf 'El adapter no existe: %s\n' "$adapter_path" >&2
   exit 2
@@ -57,6 +66,10 @@ fi
 run_stamp="$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 run_id="${RUN_ID:-${project_id}-${run_stamp}-${profile}}"
 results_dir="${RESULTS_DIR:-results/${project_id}/${run_id}}"
+if [[ "$results_dir" != /* ]]; then
+  results_dir="$root_dir/$results_dir"
+fi
+k6_results_dir="/external-results"
 host_stats_file="${results_dir}/docker-host-stats.csv"
 run_config_file="${results_dir}/run-config.json"
 mkdir -p "$results_dir"
@@ -106,7 +119,7 @@ trap 'exit 130' INT TERM
 
 DOCKER_CONTAINERS="$observed_containers" \
 K6_CONTAINER_NAME="$k6_container_name" \
-bash "$root_dir/k6/scripts/collect-host-stats.sh" "$host_stats_file" 5 0 &
+  bash "$root_dir/k6/scripts/collect-host-stats.sh" "$host_stats_file" "$host_stats_interval_seconds" 0 &
 collector_pid=$!
 
 sleep "$initial_capture_seconds"
@@ -117,6 +130,7 @@ docker run --rm --quiet \
   --network host \
   -v "$root_dir:/work" \
   -v "$adapter_mount_dir:/external-adapter:ro" \
+  -v "$results_dir:$k6_results_dir" \
   -w /work \
   "$k6_image" run \
   --env PROJECT="$project_id" \
@@ -132,7 +146,7 @@ docker run --rm --quiet \
   --env CAPACITY_STEPPED_MEASUREMENT_DURATION="$capacity_stepped_measurement_duration" \
   --env CAPACITY_STEPPED_PRE_ALLOCATED_VUS="$capacity_stepped_pre_allocated_vus" \
   --env CAPACITY_STEPPED_MAX_VUS="$capacity_stepped_max_vus" \
-  --env RESULTS_DIR="$results_dir" \
+  --env RESULTS_DIR="$k6_results_dir" \
   --env RUN_ID="$run_id" \
   "$adapter_container_path"
 k6_exit=$?

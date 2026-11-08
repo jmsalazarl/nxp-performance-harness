@@ -16,6 +16,9 @@ export * from './analysis.types';
 export * from './workload.types';
 export * from './testPlan.types';
 export * from './workloadContract.types';
+export * from './resourceProfile.types';
+export * from './resourceMetrics.types';
+export * from './resourceComparison.types';
 
 // Performance Dashboard models
 export * from './report';

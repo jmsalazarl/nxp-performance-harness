@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "constrained-a",
+      "kind": "laboratory",
+      "services": {
+        "application": { "cpu": 0.5, "memoryMiB": 768 },
+        "database": { "cpu": 0.5, "memoryMiB": 512 }
+      }
+    },
+    {
+      "id": "constrained-b",
+      "kind": "laboratory",
+      "services": {
+        "application": { "cpu": 1, "memoryMiB": 1024 },
+        "database": { "cpu": 0.75, "memoryMiB": 768 }
+      }
+    },
+    {
+      "id": "constrained-c",
+      "kind": "laboratory",
+      "services": {
+        "application": { "cpu": 2, "memoryMiB": 1536 },
+        "database": { "cpu": 1, "memoryMiB": 1024 }
+      }
+    }
+  ]
+}

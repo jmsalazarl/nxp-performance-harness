@@ -51,6 +51,30 @@ function serviceStats(rows) {
   };
 }
 
+function normalizedServiceStats(rows, allocation) {
+  const stats = serviceStats(rows);
+  const cpuLimit = Number(allocation?.cpu ?? 0);
+  const memoryLimit = Number(allocation?.memoryMiB ?? 0);
+  const normalizeCpu = (value) => value === null || cpuLimit <= 0 ? null : value / cpuLimit;
+  const normalizeMemory = (value) => value === null || memoryLimit <= 0 ? null : value / memoryLimit * 100;
+  return {
+    ...stats,
+    cpu_limit: cpuLimit || null,
+    cpu_limit_utilization_percent: {
+      avg: normalizeCpu(stats.cpu_percent.avg),
+      p95: normalizeCpu(stats.cpu_percent.p95),
+      max: normalizeCpu(stats.cpu_percent.max),
+    },
+    memory_limit_mib: memoryLimit || null,
+    memory_utilization_percent: {
+      avg: normalizeMemory(stats.memory_mib.avg),
+      p95: normalizeMemory(stats.memory_mib.p95),
+      max: normalizeMemory(stats.memory_mib.max),
+    },
+    memory_headroom_mib: stats.memory_mib.max === null || memoryLimit <= 0 ? null : memoryLimit - stats.memory_mib.max,
+  };
+}
+
 function hostStats(rows) {
   const unique = [...new Map(rows.map((row) => [row.timestamp, row])).values()];
   const metric = (name) => unique.map((row) => parseNumber(row[name])).filter((value) => value !== null);
@@ -73,12 +97,14 @@ function hostStats(rows) {
 
 const runConfig = readJson("run-config.json", {});
 const stageSummary = readJson("stage-summary.json", null);
+const resourceProfile = readJson("resource-profile.json", null);
 const rows = parseCsv(path.join(resultDir, "docker-host-stats.csv"));
 if (!stageSummary || rows.length === 0 || !runConfig.run_started_at) process.exit(0);
 
 const startedAt = Date.parse(runConfig.run_started_at);
 const roles = runConfig.container_roles || {};
 const roleByContainer = Object.fromEntries(Object.entries(roles).map(([role, container]) => [container, role]));
+const allocations = resourceProfile?.requested?.services || {};
 
 for (const stage of stageSummary.stages || []) {
   const start = startedAt + stage.window.start_seconds * 1000;
@@ -90,7 +116,7 @@ for (const stage of stageSummary.stages || []) {
   const containers = {};
   for (const container of new Set(windowRows.map((row) => row.container))) {
     const key = roleByContainer[container] || container;
-    containers[key] = { container, ...serviceStats(windowRows.filter((row) => row.container === container)) };
+    containers[key] = { container, ...normalizedServiceStats(windowRows.filter((row) => row.container === container), allocations[key]) };
   }
   stage.resources = {
     services: containers,
